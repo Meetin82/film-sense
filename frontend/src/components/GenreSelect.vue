@@ -1,6 +1,6 @@
 <template>
-  <div>
-    <select v-model="selectedGenre" @change="onGenreChange" class="border p-2">
+  <div class="mt-6">
+    <select v-model="selectedGenre" @change="onGenreChange" class="border p-3 rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-300 ease-in-out bg-white text-black">
       <option value="">Выберите жанр</option>
       <option v-for="genre in genres" :key="genre.slug" :value="genre.name">
         {{ genre.name }}
@@ -8,6 +8,8 @@
     </select>
   </div>
 </template>
+
+
 
 <script>
 import axios from "axios";

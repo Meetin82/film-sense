@@ -82,5 +82,4 @@ router.get("/movies-by-genre", async (req, res) => {
 
 
 
-
 module.exports = router;

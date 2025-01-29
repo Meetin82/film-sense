@@ -1,13 +1,18 @@
 <template>
-  <div class="container mx-auto p-4">
-    <h1 class="text-2xl font-bold mb-6">🎬 Подборка фильмов</h1>
+  <div class="bg-gray-50 min-h-screen py-8 px-6 sm:px-12">
+    <h1 class="text-4xl font-bold text-center text-indigo-700 mb-8">🎬 Подборка фильмов</h1>
 
     <!-- Поля поиска -->
-    <div class="mb-4">
+    <div class="mb-6">
       <SearchBar @search="fetchMovies" />
     </div>
 
-    <div class="flex gap-4">
+    <!-- Выбор настроения -->
+    <div class="mb-6">
+      <MoodSelect @moodSelected="fetchMoviesByMood" />
+    </div>
+
+    <div class="flex gap-6 justify-center">
       <GenreSelect @genreSelected="fetchMoviesByGenre" />
     </div>
 
@@ -15,26 +20,34 @@
     <MovieList :movies="movies" />
 
     <!-- Пагинация -->
-    <div class="mt-4 flex justify-between">
-      <button @click="goToPage(currentPage - 1)" :disabled="currentPage <= 1" class="px-4 py-2 bg-blue-500 text-white rounded">
+    <div class="mt-8 flex justify-center gap-4">
+      <button
+          @click="goToPage(currentPage - 1)"
+          :disabled="currentPage <= 1"
+          class="px-6 py-3 bg-indigo-600 text-white rounded-lg transition-colors hover:bg-indigo-700 disabled:bg-gray-400">
         Предыдущая
       </button>
-      <span>Страница {{ currentPage }}</span>
-      <button @click="goToPage(currentPage + 1)" :disabled="currentPage >= totalPages" class="px-4 py-2 bg-blue-500 text-white rounded">
+      <span class="text-lg text-gray-700">Страница {{ currentPage }}</span>
+      <button
+          @click="goToPage(currentPage + 1)"
+          :disabled="currentPage >= totalPages"
+          class="px-6 py-3 bg-indigo-600 text-white rounded-lg transition-colors hover:bg-indigo-700 disabled:bg-gray-400">
         Следующая
       </button>
     </div>
   </div>
 </template>
 
+
 <script>
 import axios from "axios";
 import SearchBar from "./components/SearchBar.vue";
 import GenreSelect from "./components/GenreSelect.vue";
 import MovieList from "./views/MovieList.vue";
+import MoodSelect from './components/MoodSelect.vue'
 
 export default {
-  components: { SearchBar, GenreSelect, MovieList },
+  components: { SearchBar, GenreSelect, MovieList, MoodSelect },
   data() {
     return {
       movies: [],
@@ -43,6 +56,7 @@ export default {
       limit: 10,        // Лимит на странице (по умолчанию 10)
       query: '',        // Текущий запрос для поиска
       genre: '',        // Текущий выбранный жанр
+      mood: '',
     };
   },
   watch: {
@@ -67,28 +81,30 @@ export default {
       }
     },
 
-    async fetchMovies(query) {
-      this.query = query;  // Обновляем параметр запроса
+    async fetchMovies() {
+      // Формируем запрос с учетом жанра и настроения
+      const genreQuery = this.genre ? this.genre : '';  // Если жанр не выбран, пустая строка
 
-      // Обновляем URL с текущим запросом и параметрами
+      // Обновляем URL с текущими параметрами
       this.$router.push({
         path: '/search',
         query: {
-          query: this.query,  // передаем query в URL
+          query: this.query,
           page: this.currentPage,
-          genre: this.genre,
+          genre: genreQuery,
         },
       });
 
       try {
         const response = await axios.get(`http://localhost:5000/api/search`, {
           params: {
-            query: query,
+            query: this.query,
             page: this.currentPage,
             limit: this.limit,
             selectFields: ["id", "name", "rating", "genres", "poster"],
             sortField: ["rating"],
             sortType: ["-1"],
+            genre: genreQuery, // Передаем выбранный жанр
           },
         });
         this.movies = response.data.docs;
@@ -107,7 +123,7 @@ export default {
         query: {
           query: this.query,  // передаем query в URL
           page: this.currentPage,
-          genre: this.genre,  // передаем genre в URL
+          genre: this.genre,
         },
       });
 
@@ -128,6 +144,58 @@ export default {
         this.totalPages = response.data.pages;  // Обновляем общее количество страниц
       } catch (error) {
         console.error("Ошибка загрузки фильмов по жанру:", error);
+      }
+    },
+
+    async fetchMoviesByMood(mood) {
+      this.mood = mood;
+
+      // Маппинг жанров для настроений
+      const moodToGenreMap = {
+        sad: ['драма', 'мелодрама', 'трагедия'],
+        happy: ['комедия'],
+        thrill: ['триллер', 'криминальный'],
+        scare: ['ужасы'],
+        inspire: ['биография', 'драма'],
+      };
+
+      // Получаем жанры для выбранного настроения
+      const genres = moodToGenreMap[mood] || [];
+
+      // Присваиваем жанры напрямую
+      this.genre = genres;
+
+      console.log('Выбранное настроение:', this.mood);
+      console.log('Жанры для настроения:', this.genre);
+
+      // Убедитесь, что жанры передаются как массив
+      const genreArray = Array.isArray(this.genre) ? this.genre : [this.genre];
+
+      // Обновляем URL с текущими параметрами
+      this.$router.push({
+        path: '/search',
+        query: {
+          query: this.query,
+          page: this.currentPage,
+          genre: genreArray.join(','),  // Передаем жанры как строку в URL
+        },
+      });
+
+      try {
+        const response = await axios.get(`http://localhost:5000/api/movies-by-genre`, {
+          params: {
+            genre: genreArray,  // Передаем жанры как массив
+            page: this.currentPage,
+            limit: this.limit,
+            selectFields: ["id", "name", "rating", "genres", "poster"],
+            sortField: ["rating"],
+            sortType: ["-1"],
+          },
+        });
+        this.movies = response.data.docs;  // Получаем фильмы
+        this.totalPages = response.data.pages;  // Обновляем общее количество страниц
+      } catch (error) {
+        console.error("Ошибка загрузки фильмов по настроению:", error);
       }
     },
 
