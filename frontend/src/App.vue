@@ -60,11 +60,12 @@ export default {
     };
   },
   watch: {
-    // Наблюдаем за изменениями параметров и перезагружаем фильмы
-    '$route.query.page': 'fetchMoviesFromUrl',
-    '$route.query.query': 'fetchMoviesFromUrl',
-    '$route.query.genre': 'fetchMoviesFromUrl',
+    '$route.query': {
+      handler: 'fetchMoviesFromUrl',
+      deep: true
+    }
   },
+
   methods: {
     async fetchMoviesFromUrl() {
       // Получаем параметры из URL и вызываем соответствующие методы
@@ -81,8 +82,9 @@ export default {
       }
     },
 
-    async fetchMovies() {
+    async fetchMovies(query = this.query) {
       // Формируем запрос с учетом жанра и настроения
+      this.query = query;
       const genreQuery = this.genre ? this.genre : '';  // Если жанр не выбран, пустая строка
 
       // Обновляем URL с текущими параметрами
@@ -154,9 +156,9 @@ export default {
       const moodToGenreMap = {
         sad: ['драма', 'мелодрама', 'трагедия'],
         happy: ['комедия'],
-        thrill: ['триллер', 'криминальный'],
+        thrill: ['триллер'],
         scare: ['ужасы'],
-        inspire: ['биография', 'драма'],
+        inspire: ['биография'],
       };
 
       // Получаем жанры для выбранного настроения
